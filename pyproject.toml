@@ -1,0 +1,20 @@
+[project]
+name = "prompt-versioner"
+version = "0.1.0"
+description = "Git-style version control for production prompts — versioned SQLite store, diffs, hash-stable weighted A/B routing."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Darrshan Govender", email = "darrshangovender@gmail.com" }]
+keywords = ["llm", "prompts", "versioning", "ab-test", "mlops"]
+dependencies = ["rich>=13.7"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.4"]
+
+[project.scripts]
+pv = "prompt_versioner.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
