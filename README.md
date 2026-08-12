@@ -2,7 +2,8 @@
 
 # prompt-versioner — Git-style version control for production prompts
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)]
+[![tests](https://github.com/darrshangovender/prompt-versioner/actions/workflows/tests.yml/badge.svg)](https://github.com/darrshangovender/prompt-versioner/actions/workflows/tests.yml)(LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)](https://sqlite.org)
 [![CLI](https://img.shields.io/badge/Interface-CLI%20%2B%20library-555)](#)
