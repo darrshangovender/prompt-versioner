@@ -1,8 +1,14 @@
 """Hash-stable weighted routing.
 
 The same input prompt always lands on the same version within a routing
-config. Switching the route re-partitions the hash space consistently, so
-~10% of traffic moves when you change one weight by 10%.
+config.
+
+Note the partition is a sequential walk over versions in sorted order, not
+consistent hashing: the boundaries are cumulative, so changing one weight moves
+every boundary after it. Going from ``{1: .5, 2: .25, 3: .25}`` to
+``{1: .4, 2: .25, 3: .35}`` moves 20% of traffic, not 10%, and replaces v2's
+population wholesale even though its weight did not change. Stickiness holds
+for a *fixed* routing config; it does not hold across a reweight.
 """
 
 from __future__ import annotations
@@ -37,4 +43,4 @@ def pick_version(weights: dict[int, float], hash_key: str) -> int:
         cumulative += weights[version] / total
         if fraction < cumulative:
             return version
-    return sorted(weights.keys())[-1]  # belt-and-braces for rounding edge cases
+    return max(weights.keys())  # belt-and-braces for rounding edge cases
