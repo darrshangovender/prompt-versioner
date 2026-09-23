@@ -6,11 +6,10 @@ import hashlib
 import json
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from .routing import pick_version
-
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS prompts (
@@ -65,7 +64,7 @@ class PromptStore:
             return latest
 
         next_version = (latest.version + 1) if latest else 1
-        created = datetime.now(timezone.utc).isoformat()
+        created = datetime.now(UTC).isoformat()
         self._conn.execute(
             "INSERT INTO prompts (name, version, body, sha256, created) VALUES (?, ?, ?, ?, ?)",
             (name, next_version, body, sha, created),
@@ -80,7 +79,7 @@ class PromptStore:
         self._conn.execute(
             "INSERT INTO routes (name, weights, updated) VALUES (?, ?, ?) "
             "ON CONFLICT(name) DO UPDATE SET weights = excluded.weights, updated = excluded.updated",
-            (name, json.dumps({str(k): v for k, v in weights.items()}), datetime.now(timezone.utc).isoformat()),
+            (name, json.dumps({str(k): v for k, v in weights.items()}), datetime.now(UTC).isoformat()),
         )
         self._conn.commit()
 
@@ -99,14 +98,31 @@ class PromptStore:
     # ---- read ----
 
     def get(self, name: str, hash_key: str | None = None) -> PromptVersion:
-        """Get the version of `name` for the given hash_key (defaults to the name itself).
+        """Get the version of `name` for the given `hash_key`.
 
-        Uses the route to pick deterministically.
+        `hash_key` must vary per request — a request id, a user id, or the input
+        text — because that variation is what actually spreads traffic across a
+        weighted route.
+
+        It may be omitted only when the route sends everything to one version,
+        where the key cannot change the outcome. It used to default to the prompt
+        *name*, which is a constant: every call hashed to the same point, so a
+        split route collapsed entirely onto whichever version that one point fell
+        in. A `{1: 0.9, 2: 0.1}` canary therefore served v2 to either 0% or 100%
+        of traffic depending on how the name happened to hash — with a success
+        message either way and nothing to indicate the split was not happening.
         """
         weights = self._get_weights(name)
         if not weights:
             raise KeyError(f"no prompt named {name!r}")
-        chosen = pick_version(weights, hash_key or name)
+        live = sorted(v for v, w in weights.items() if w > 0)
+        if hash_key is None and len(live) > 1:
+            raise ValueError(
+                f"{name!r} is routed across versions {live}; pass hash_key (a "
+                "per-request value such as a request id or the input text) so "
+                "traffic actually splits"
+            )
+        chosen = pick_version(weights, name if hash_key is None else hash_key)
         return self.get_version(name, chosen)
 
     def get_version(self, name: str, version: int | None, *, _internal: bool = False) -> PromptVersion | None:
